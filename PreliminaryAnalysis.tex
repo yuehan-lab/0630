@@ -35,15 +35,7 @@ mechanical response.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Event-locked average of $|\delta(t)|$ around touch events.
-  X-axis: time relative to touch event (ms), $-100$ to $+200$.
-  Y-axis: linear acceleration magnitude (mg), 0 to 5.
-  Two curves: Human (amber orange, clear impulse peak at $t{=}0$ reaching $\approx$3.2\,mg,
-  decaying smoothly to baseline by $\sim$60\,ms) and LLM Agent (navy blue, flat at noise
-  floor $\approx$0.2\,mg throughout).
-  Shaded region $[0, 60]$\,ms in light amber. Error band ($\pm$1 std) around each curve.
-  Vertical dashed line at $t{=}0$ labeled ``Touch Event.''
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_obs1}
   \caption{Event-locked accelerometer response to touch events.
   Real finger contact (human) produces a detectable mechanical impulse ($\approx$3.2\,mg,
   SNR $\approx$8.4\,dB, decay $\lesssim$60\,ms);
@@ -75,14 +67,7 @@ each artificially timed event.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Probability density of inter-touch intervals $\Delta t$.
-  X-axis: interval duration (ms), log scale, 50 to 5000, ticks at 50, 100, 200, 500, 1000, 2000, 5000.
-  Y-axis: probability density.
-  Three curves: Human (amber orange, lognormal shape, single mode around 400--600\,ms),
-  LLM Agent cloud (navy blue, bimodal: small peak at $\sim$130\,ms and larger peak at
-  $\sim$1{,}050\,ms), ADB script (steel gray, near-uniform with hard floor at $\sim$47\,ms).
-  Two vertical dashed navy lines marking the two LLM-agent peaks.
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_obs2}
   \caption{Inter-touch interval distributions.
   Human intervals follow a lognormal distribution (mean 423\,ms, CV 0.68) from neuromotor
   variability; LLM agents show a bimodal signature from inference latency; scripted ADB
@@ -108,17 +93,7 @@ of both signals end-to-end.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: t-SNE 2D scatter plot.
-  Three clusters: Human (amber orange squares), Autonomous Agent (navy blue circles),
-  Overlay Agent (steel gray triangles).
-  Three visually separated cluster regions with minimal overlap.
-  Human cluster: upper-left region.
-  Autonomous Agent cluster: lower-right region.
-  Overlay Agent cluster: upper-right region (partially overlapping with Human, but distinct).
-  Axes: t-SNE Dim 1 / t-SNE Dim 2. No tick numbers (schematic).
-  Faint dashed ellipse outline around each cluster in the corresponding color.
-  Legend in top-right corner.
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_obs3}
   \caption{t-SNE projection of joint causality score and bimodality index features.
   Human, autonomous agent, and overlay agent windows form three well-separated clusters
   (silhouette score 0.81), validating the discriminability of the two physical primitives

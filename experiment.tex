@@ -92,18 +92,7 @@ above 10\% to reach 90\% TPR.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: ROC curve, active mode, A0 adversary.
-  X-axis: False Positive Rate (\%), 0--20 (zoomed to 0--20 for clarity).
-  Y-axis: True Positive Rate (\%), 80--100.
-  Five curves:
-    navy blue solid (PCCN-Full): rises steeply, reaches 97\% TPR at 2\% FPR;
-    amber orange dashed (PCCN-Passive): reaches 94\% TPR at 5\% FPR;
-    steel gray dash-dot (TToS-Features): reaches 90\% TPR at 11\% FPR;
-    soft blue dotted (MiniRocket): reaches 90\% TPR at 12\% FPR;
-    light gray dotted (BeCAPTCHA-Accel): reaches 88\% TPR at 13\% FPR.
-  Star markers on each curve at the EER point.
-  Legend in lower right. No gridlines.
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_roc}
   \caption{ROC curves in active mode under A0 adversary (zoomed to FPR 0--20\%).
   PCCN-Full achieves $>$97\% TPR at FPR $<$2\%.
   Star markers indicate the equal error rate (EER) operating point.}
@@ -118,24 +107,7 @@ and per-event PCS at the challenged position $t^*$, for all three session classe
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Two-panel violin/box plot.
-  Left panel, title ``Session-level $\bar{\mathrm{PCS}}$'':
-    X-axis: three groups ``Human'', ``Autonomous Agent'', ``Overlay Agent''.
-    Y-axis: mean PCS value, 0.0--1.0.
-    Three violin plots:
-      Human (amber): median $\approx$0.81, tight distribution 0.70--0.93;
-      Autonomous Agent (navy): median $\approx$0.08, tight distribution 0.03--0.16;
-      Overlay Agent (steel gray): median $\approx$0.74, distribution 0.62--0.88
-        (similar to human because most touches are real).
-    White dot inside each violin at median. Horizontal dashed line at PCS=0.5.
-  Right panel, title ``PCS at challenge event $t^*$ (Active mode)'':
-    X-axis: two groups ``Human at $t^*$'', ``Overlay Agent at $t^*$''.
-    Y-axis: PCS$_{t^*}$, 0.0--1.0.
-    Two violin plots:
-      Human (amber): median $\approx$0.79, distribution 0.62--0.93;
-      Overlay Agent at $t^*$ (red/coral): median $\approx$0.07, distribution 0.02--0.18.
-    Horizontal dashed line at PCS=0.3 (the OAL margin $\gamma$).
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_pcs}
   \caption{Physical Causal Score distributions. Left: session-level $\bar{\mathrm{PCS}}$
   clearly separates human from autonomous agent sessions; overlay agent sessions show
   human-like $\bar{\mathrm{PCS}}$ because most touches are genuine. Right: PCS at the
@@ -158,20 +130,7 @@ localization via OAL is necessary and effective.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Grouped bar chart, white background.
-  X-axis: four labeled device family groups: ``Pixel (4 models)'',
-    ``Galaxy (5 models)'', ``OnePlus (4 models)'', ``Xiaomi (5 models)''.
-  Y-axis: Accuracy (\%), range 78--100, major gridlines at 80, 85, 90, 95, 100.
-  Five bars per group:
-    steel gray: BeCAPTCHA-Accel   (Pixel=86.3, Galaxy=85.2, OnePlus=83.6, Xiaomi=82.1);
-    soft blue:  TToS-Features     (Pixel=90.1, Galaxy=88.9, OnePlus=87.2, Xiaomi=85.8);
-    light green: MiniRocket       (Pixel=88.7, Galaxy=87.3, OnePlus=86.5, Xiaomi=84.9);
-    amber orange: PCCN-Passive    (Pixel=95.2, Galaxy=94.1, OnePlus=92.7, Xiaomi=91.3);
-    navy blue: PCCN-Full          (Pixel=98.1, Galaxy=97.6, OnePlus=96.8, Xiaomi=95.4).
-  Error bars ($\pm$1 std) on each bar.
-  Horizontal dashed navy line at 95\%.
-  Legend inside chart upper-left.
-  Unified navy/amber/gray/green palette.]}
+  \includegraphics[width=\linewidth]{fig_crossdevice}
   \caption{Cross-device accuracy under zero-overlap device-model split.
   PCCN-Full exceeds 95\% on all four device families, demonstrating
   device-agnostic physical causality detection.}
@@ -230,17 +189,7 @@ mean, slightly confusing the timing stream.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Line chart, white background.
-  X-axis: ``Number of Challenge Events $n$'', integer ticks 1 to 5.
-  Y-axis: ``Detection Accuracy (\%)'', range 60--100.
-  Two lines with markers:
-    navy blue solid with filled circles (PCCN-Full):
-      n=1: 91.3\%, n=2: 95.7\%, n=3: 97.8\%, n=4: 98.6\%, n=5: 99.1\%.
-    amber orange dashed with filled squares (PCCN-Passive):
-      flat at 61.4\% ($\pm$2.1\%) across all $n$ (passive cannot exploit active challenges).
-  Shaded bands ($\pm$1 std) in corresponding colors at 30\% opacity.
-  Horizontal dashed navy line at 95\% labeled ``95\% target''.
-  Legend in lower right. No gridlines.]}
+  \includegraphics[width=\linewidth]{fig_overlay}
   \caption{Overlay agent detection accuracy vs.\ number of server-selected challenge events.
   A single challenge event ($n{=}1$) achieves 91.3\% detection; passive mode cannot
   distinguish overlay agents from human sessions (61.4\%, near chance for this class).}
@@ -281,6 +230,15 @@ PCCN-Full                          & \textbf{97.3} & \textbf{1.8} &      ---    
 \end{tabular}
 \end{table}
 
+\begin{figure}[t]
+  \centering
+  \includegraphics[width=\linewidth]{fig_ablation}
+  \caption{Ablation study (active mode, A0). Left: accuracy; right: EER.
+  Removing PC-CWA causes the largest overall degradation; removing OAL collapses
+  overlay-class F1 from 96.3\% to 71.4\%.}
+  \label{fig:ablation}
+\end{figure}
+
 Removing PC-CWA (replacing with generic cross-modal attention) causes the largest drop
 (3.9 pp ACC, 3.3 pp EER), confirming that physics-constrained attention is the dominant
 discriminative component.%
@@ -300,20 +258,7 @@ generalization.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Two-panel heatmap.
-  Left panel (title ``Human sessions''):
-    X-axis: ``Time Offset from Touch (ms)'', $-$100 to $+$200, dashed vertical at 0.
-    Y-axis: ``Touch Event Index'', ascending integers.
-    Color: white (low) $\rightarrow$ amber (high attention weight).
-    Strong amber horizontal band spanning all event rows in the 0--60\,ms range.
-    Pale/white outside this band.
-  Right panel (title ``Agent sessions''):
-    Same axes. Color: white (low) $\rightarrow$ navy (high).
-    Uniformly pale/white across all time offsets and all event rows.
-  Shared color bar on far right: ``Attention Weight''.
-  Black dashed vertical line at $t{=}0$ in both panels labeled ``Touch Event''.
-  Light amber shaded rectangle $[0, 60]$\,ms in left panel.
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_attention}
   \caption{PC-CWA attention weights averaged over 480 human and 480 agent test sessions.
   Human sessions (left): attention self-organizes into the $[0,\,60]$\,ms causal window
   without explicit supervision on the window boundaries.
@@ -324,18 +269,7 @@ generalization.%
 
 \begin{figure}[t]
   \centering
-  \textcolor{green}{[Figure: Three-panel line chart of learned ISPM prototype spectra.
-  X-axis (shared): ``Frequency Bin'', 8 labeled bins: 1--4, 4--8, 8--15, 15--25, 25--35,
-    35--42, 42--48, 48--50\,Hz.
-  Y-axis (shared): ``Normalized Spectral Energy'', 0.0--1.0.
-  Left panel (title ``$\mathbf{p}_1$: Broadband (Human Finger)'' --- amber orange line):
-    Relatively flat energy across all 8 bins (0.55--0.80), slightly higher in 4--25\,Hz range.
-  Center panel (title ``$\mathbf{p}_2$: Narrowband (Vibration Motor)'' --- navy blue line):
-    Sharp peak at the 15--25\,Hz bin (energy $\approx$0.91), near-zero elsewhere.
-  Right panel (title ``$\mathbf{p}_3$: Noise Floor (Agent)'' --- steel gray line):
-    Flat line close to zero across all bins (0.05--0.12).
-  No supervision on prototype shapes was provided; shapes emerged from training.
-  White background, unified palette.]}
+  \includegraphics[width=\linewidth]{fig_proto}
   \caption{Learned ISPM spectral prototypes (no explicit spectral supervision).
   $\mathbf{p}_1$ captures the broadband energy of real finger impact (1--50\,Hz).
   $\mathbf{p}_2$ captures the narrowband oscillation of the ERM vibration motor ($\approx$18\,Hz).

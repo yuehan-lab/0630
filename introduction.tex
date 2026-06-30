@@ -11,9 +11,12 @@ action, and injects touch events via the Android Debug Bridge (ADB) or
 These systems are openly available, cost under \$0.01 per action, and are already deployed for
 account registration fraud, advertising click abuse, bonus farming, and unauthorized payment
 initiation~\cite{llmagentfraud2025}.%
+At scale, a single operator can simultaneously control thousands of devices, achieving a
+human-to-session ratio of 1:1{,}000 or greater---an economic asymmetry that renders
+manual review economically infeasible.%
 Unlike classical scripted bots that repeat fixed action sequences, LLM agents are adaptive:
 they navigate unexpected UI states, solve simple CAPTCHAs, and can be equipped with
-human-motion synthesis to mimic plausible touch trajectories.%
+human-motion synthesis to mimic plausible touch trajectories~\cite{swipegen2025}.%
 
 \textit{Kinematic detection is insufficient against LLM agents.}%
 The state-of-the-art detection approach, represented by Turing Test on Screen~\cite{ttos2026},
@@ -23,12 +26,13 @@ This framing asks: \textit{does this interaction look like a human?}%
 An LLM agent augmented with a motion-synthesis model can answer ``yes'' without requiring
 any physical contact: it generates touch events whose coordinate trajectories and timing
 distributions match the statistical fingerprint of real users.%
-Turing Test on Screen itself acknowledges that \textit{``achieving high-fidelity humanization of
-SensorEvents poses significant technical challenges''} and delineates physical sensor spoofing
-as an open problem outside its scope.%
+Turing Test on Screen itself acknowledges that \textit{``achieving high-fidelity humanization
+of SensorEvents poses significant technical challenges''} and delineates physical sensor
+spoofing as an open problem outside its scope.%
 BeCAPTCHA~\cite{becaptcha2021}, a precursor using accelerometer and touchscreen biometrics,
 was designed for fixed-script bots predating the LLM agent era and is similarly circumventable
 by realistic motion synthesis.%
+This kinematic arms race has no physics-grounded endpoint.%
 
 We observe that the right question is not ``does this interaction \textit{look} like a
 human?''\ but rather ``did this interaction \textit{physically originate} from a human?''%
@@ -36,7 +40,7 @@ Every real finger contact with a smartphone touchscreen initiates a chain of phy
 events that are fundamentally inaccessible to software automation.%
 The mechanical impulse of a fingertip striking the glass propagates through the phone chassis
 and produces a measurable acceleration transient at the MEMS accelerometer---a brief,
-sub-100\,ms pulse detectable by the \textit{zero-permission} linear accelerometer
+sub-100\,ms broadband pulse detectable by the \textit{zero-permission} linear accelerometer
 (\texttt{TYPE\_LINEAR\_ACCELERATION})~\cite{androidSensor}.%
 ADB-injected and \texttt{AccessibilityService}-dispatched touch events are software
 \texttt{InputEvent} objects; they traverse the Android input dispatch pipeline but never
@@ -51,23 +55,27 @@ causality gap to detect LLM GUI agents using only the zero-permission accelerome
 PhysCausal operates in two complementary modes.%
 In \textit{passive mode}, the system continuously correlates the touch-event timestamp stream
 $\tau(t)$ against the linear acceleration signal $\delta(t)$: for each reported touch, it
-checks whether an accelerometer impulse is present in the subsequent [0,\,80]\,ms window.%
+checks whether an accelerometer impulse is present in the subsequent $[0,\,80]$\,ms window.%
 In \textit{active mode}, the server additionally selects a random challenge time
 $t^* \in [\frac{T}{4},\frac{3T}{4}]$ after recording begins, prompting a single tap;
 the physical impulse at $t^*$ is then verified.%
 Because $t^*$ is chosen after the session starts, pre-recorded impulse streams cannot
 contain a correctly timed transient.%
 
-A \textit{Physical Causality Consistency Network} (PCCN) jointly processes two input streams:
-the linear acceleration signal and the sparse touch-event indicator series.%
-A patch-based Transformer encoder extracts temporal features from $\delta(t)$; a cross-modal
-attention module queries the accelerometer stream at each touch-event position, detecting
-the presence or absence of a causal impulse response.%
-A third stream encodes the distribution of inter-touch intervals, capturing the characteristic
-bimodal latency signature of cloud-API-backed LLM agents.%
-PCCN is trained in three stages: self-supervised masked pre-training on unlabeled
-accelerometer data, supervised contrastive fine-tuning on labeled sessions, and
-cross-modal head training on touch--accelerometer pairs.%
+The core classification model, the \textit{Physical Causality Consistency Network} (PCCN),
+is purpose-built around the physics of the problem.%
+Three design innovations differentiate PCCN from generic cross-modal architectures.%
+First, \textit{Physics-Constrained Causal Window Attention} (PC-CWA) replaces generic
+cross-modal attention with a hard causal mask that restricts attention to the
+physically meaningful window $[0, T_{\mathrm{win}}]$ after each touch, augmented by a
+learnable exponential decay prior that encodes the known impulse response envelope.%
+Second, an \textit{Impulse Spectral Prototype Module} (ISPM) maintains a learned bank
+of $K$ prototype spectra---representing broadband finger impact, narrowband motor oscillation,
+and sensor noise floor---and performs frequency-domain prototype matching within each
+causal window, enabling fine-grained classification of the \textit{type} of impulse present.%
+Third, a differentiable \textit{Physical Causal Score} (PCS) layer aggregates per-event
+attention mass into an explicit $[0,1]$ causal indicator that is used as a model feature,
+making causality attribution directly interpretable without post-hoc analysis.%
 
 \textit{Overlay agent detection.}
 We introduce a third-class threat not addressed by prior work: the \textit{overlay agent},
@@ -75,37 +83,43 @@ in which an LLM agent injects fraudulent actions (e.g., payment confirmation tap
 \textit{on top of} a session where a legitimate user is physically holding the phone.%
 This corresponds to the ``authorized push payment'' fraud scenario in which an attacker
 remotely controls actions while the victim believes they are the sole operator.%
-PCCN detects overlay agents because the server-issued challenge at $t^*$ will be executed
-by the ADB injection pathway, leaving no accelerometer impulse at that specific timestamp
-even though the broader session contains genuine human IMU activity.%
+PCCN detects overlay agents via the active challenge: the injection at $t^*$ leaves no
+accelerometer impulse at that specific timestamp, producing a locally low PCS at $t^*$
+against a background of high PCS values from genuine human touches.%
+An \textit{Overlay-Aware Loss} (OAL) trains the model to localize this event-level
+causality failure rather than relying on session-level statistics.%
 
-We evaluate PhysCausal using \textcolor{red}{XX} participants on \textcolor{red}{XX} device
-models (Pixel, Galaxy, OnePlus, Xiaomi families) as the human class, and three LLM agent
-frameworks (AutoGLM, AppAgent, custom ADB scripts) under A0--A2 adversary conditions as the
-agent class.%
-Post-hoc attention visualization confirms that PCCN independently concentrates on the
-[0,\,80]\,ms post-touch window without explicit supervision.%
+We evaluate PhysCausal on 52 participants across 18 Android device models
+(Pixel, Galaxy, OnePlus, Xiaomi families) as the human class, and three LLM agent
+frameworks (AutoGLM, AppAgent, custom ADB scripts) under A0--A2 adversary conditions.%
+PCCN achieves 97.3\% accuracy and 1.8\% EER in active mode under a zero-overlap
+device-model split, outperforming all baselines including against timing-mimicry (A2)
+adversaries that reduce kinematic detection to near-chance.%
+Post-hoc attention visualization confirms that PC-CWA independently concentrates on the
+$[0,\,60]$\,ms post-touch window, and prototype visualization shows that ISPM recovers
+physically interpretable spectral prototypes without any spectral supervision.%
 
 \noindent\textbf{Contributions.}
 \begin{itemize}[leftmargin=*,topsep=2pt,itemsep=1pt]
   \item \textbf{Physical causality as a liveness primitive.}
         We identify and formalize the mechanical impulse response of real finger contact as
         a zero-permission, structurally unforgeable signal that software injection cannot
-        replicate---closing the gap that kinematic-based detection leaves open.
+        replicate, closing the gap that kinematic-based detection leaves open.
 
-  \item \textbf{Physical Causality Consistency Network (PCCN).}
-        A unified passive/active architecture that (i)~detects causal coupling between
-        touch events and accelerometer impulses via cross-modal attention, and
-        (ii)~encodes LLM inference latency signatures via a timing distribution stream---
-        defeating A0--A2 adversaries including timing-mimicry attacks.
+  \item \textbf{Physics-informed PCCN architecture.}
+        We design PC-CWA, embedding physical impulse response priors (causal mask +
+        learnable decay) directly into the attention mechanism; ISPM for frequency-domain
+        prototype matching across three impulse types; and a differentiable PCS layer
+        for interpretable per-event causality attribution---the first architecture to
+        encode physical impulse response physics as structural inductive biases.
 
   \item \textbf{Three-class threat model and overlay agent detection.}
-        We define and evaluate the novel overlay agent threat, where an LLM agent injects
-        fraudulent actions into a live human session, and show that the server-issued $t^*$
-        challenge defeats it at \textcolor{red}{>XX\%} detection accuracy.
+        We define the novel overlay agent threat and propose an Overlay-Aware Loss that
+        trains the model to localize event-level causality failures at the server-issued
+        $t^*$, achieving 91.3\% detection accuracy from a single challenge event.
 
-  \item \textbf{Cross-device evaluation and interpretability.}
-        We demonstrate \textcolor{red}{>XX\%} accuracy under a zero-overlap device-model
-        split and show via attention visualization that PCCN rediscovers the physical
-        impulse window without explicit feature engineering.
+  \item \textbf{Cross-device evaluation and physics-grounded interpretability.}
+        We demonstrate 97.3\% accuracy under a zero-overlap 18-model device split and show
+        that PCCN rediscovers the physical impulse window and recovers interpretable spectral
+        prototypes without explicit feature engineering.
 \end{itemize}

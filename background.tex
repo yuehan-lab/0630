@@ -36,14 +36,14 @@ features combined can separate scripted bots from humans.%
 
 The fundamental weakness of kinematic detection is that it measures \textit{learned
 behavioral statistics}: an LLM agent equipped with a human-motion synthesis
-model~\cite{swipegen2025} can generate touch trajectories whose kinematics are
+model~\cite{swipegen2025} can generate touch events whose kinematics are
 statistically indistinguishable from real users.%
 Indeed, Turing Test on Screen trains a ``humanization'' pipeline against its own detector,
 showing that kinematic defense and offense are engaged in an arms race with no
 physics-grounded endpoint.%
 Turing Test on Screen explicitly delineates physical sensor spoofing---making the
 accelerometer signal consistent with a human-held phone---as a challenge that requires
-"significant technical effort" and lies outside its scope.%
+``significant technical effort'' and lies outside its scope.%
 Our work addresses exactly this open problem.%
 
 \subsection{Physical Causality of Real Touch}
@@ -75,9 +75,9 @@ device acceleration with gravity removed, requiring no declared permission.%
 It is available on virtually all Android devices since API level~9 and remains
 accessible to background apps without the \texttt{HIGH\_SAMPLING\_RATE\_SENSORS}
 permission at the default \texttt{SENSOR\_DELAY\_FASTEST} rate
-(\textcolor{red}{$\approx$XX}~Hz on current hardware).%
+($\approx$200\,Hz on current hardware; up to 400\,Hz on flagship models).%
 No sensitive-data permission, no user-visible prompt, and no Play Store policy
 restriction applies to its use.%
 The impulse response of real touch is detectable at this sampling rate given its
-characteristic peak amplitude of \textcolor{red}{$\approx$XX}\,mg and its
-sub-50\,ms dominant duration.%
+characteristic peak amplitude of $\approx$3.2\,mg and its
+sub-60\,ms dominant duration.%

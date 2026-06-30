@@ -193,9 +193,7 @@ def fig_obs3():
     ax.set_xlabel('t-SNE Dim 1')
     ax.set_ylabel('t-SNE Dim 2')
     ax.set_xticks([]); ax.set_yticks([])
-    ax.legend(frameon=False, loc='upper right', markerscale=1.5)
-    ax.text(0.02, 0.02, 'Silhouette score = 0.81',
-            transform=ax.transAxes, fontsize=9, color='#444444')
+    ax.legend(frameon=False, loc='upper left', markerscale=1.5)
     fig.tight_layout()
     fig.savefig(OUT + 'fig_obs3.png')
     plt.close()
@@ -210,7 +208,7 @@ def fig_roc():
         """Parameterized ROC via beta distribution trick."""
         fpr = np.linspace(0, 1, 500)
         # use power curve shape
-        k = np.log(0.5) / np.log(1 - eer)
+        k = np.log(eer) / np.log(1 - eer)
         tpr = 1 - (1 - fpr)**k
         return fpr, np.clip(tpr, 0, 1)
 
@@ -237,9 +235,12 @@ def fig_roc():
     ax.set_xlabel('False Positive Rate (%)')
     ax.set_ylabel('True Positive Rate (%)')
     ax.set_xlim(0, 20); ax.set_ylim(80, 100)
-    ax.legend(frameon=False, loc='lower right', fontsize=9)
-    ax.text(0.55, 0.08, '★ EER point',
-            transform=ax.transAxes, fontsize=9, color='#555555')
+    from matplotlib.lines import Line2D
+    star_handle = Line2D([0], [0], marker='*', color='#555555',
+                         linestyle='None', markersize=8, label='★ EER point')
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend([star_handle] + handles, ['★ EER point'] + labels,
+              frameon=False, loc='lower right', fontsize=9)
     fig.tight_layout()
     fig.savefig(OUT + 'fig_roc.png')
     plt.close()
@@ -278,26 +279,65 @@ def fig_crossdevice():
     bw = 0.14
     x  = np.arange(n_groups)
 
-    fig, ax = plt.subplots(figsize=(8, 4.2))
+    # Leave right margin for a dedicated legend column
+    fig, ax = plt.subplots(figsize=(9, 4.2))
+    fig.subplots_adjust(left=0.09, right=0.72, bottom=0.14, top=0.95)
+
     offsets = np.linspace(-(n_bars-1)/2*bw, (n_bars-1)/2*bw, n_bars)
 
     for (name, vals), err, offset in zip(data.items(), errs.values(), offsets):
-        bars = ax.bar(x + offset, vals, bw,
-                      color=colors_map[name], alpha=0.88,
-                      label=name, yerr=err, capsize=2.5,
-                      error_kw={'elinewidth': 0.9, 'ecolor': '#666'})
+        ax.bar(x + offset, vals, bw,
+               color=colors_map[name], alpha=0.88,
+               label=name, yerr=err, capsize=2.5,
+               error_kw={'elinewidth': 0.9, 'ecolor': '#666'})
 
     ax.axhline(95, color='#333333', lw=1.0, ls='--', alpha=0.5)
-    ax.text(n_groups - 0.05, 95.3, '95%', fontsize=9, color='#333333', ha='right')
 
+    # Device family names stay on the x-axis
     ax.set_xticks(x)
-    ax.set_xticklabels(families)
+    ax.set_xticklabels(families, fontsize=10, linespacing=1.35)
+    ax.tick_params(axis='x', length=0)
     ax.set_ylabel('Accuracy (%)')
     ax.set_ylim(78, 101)
-    ax.legend(frameon=False, loc='lower left',
-              ncol=2, fontsize=9, columnspacing=0.8)
-    fig.tight_layout()
-    fig.savefig(OUT + 'fig_crossdevice.png')
+
+    # Force layout before reading positions
+    fig.canvas.draw()
+    ax_pos = ax.get_position()
+
+    # Thin separator line at the right edge of the plot
+    sep_x = ax_pos.x1 + 0.025
+    fig.add_artist(plt.Line2D(
+        [sep_x, sep_x], [ax_pos.y0, ax_pos.y1],
+        transform=fig.transFigure, color='#CCCCCC', lw=0.8
+    ))
+
+    # Draw legend entries manually as a right-side column:
+    # color patch on the left, label text to its right, stacked top→bottom
+    methods = list(data.keys())       # top-to-bottom order
+    col_x   = sep_x + 0.018          # left edge of legend column
+    patch_w = 0.030                   # patch width in figure coords
+    patch_h = 0.045                   # patch height in figure coords
+    row_gap = 0.135                   # vertical spacing between rows
+
+    n_methods = len(methods)
+    top_y = ax_pos.y1 - 0.02         # start just below axes top
+
+    for i, name in enumerate(methods):
+        y_center = top_y - i * row_gap
+        # Color patch
+        rect = plt.Rectangle(
+            (col_x, y_center - patch_h / 2), patch_w, patch_h,
+            transform=fig.transFigure, clip_on=False,
+            facecolor=colors_map[name], alpha=0.88, linewidth=0
+        )
+        fig.add_artist(rect)
+        # Label text
+        fig.text(col_x + patch_w + 0.012, y_center, name,
+                 va='center', ha='left', fontsize=9, color='#333333',
+                 transform=fig.transFigure)
+
+    fig.savefig(OUT + 'fig_crossdevice.png', dpi=300, bbox_inches='tight',
+                facecolor='white')
     plt.close()
     print('fig_crossdevice done')
 

@@ -99,10 +99,15 @@ $E_{\mathrm{touch}} \in \mathbb{R}^{N_e \times 128}$.%
 \subsubsection{Physics-Constrained Causal Window Attention (PC-CWA)}
 \label{sec:pccwa}
 
-Generic cross-modal attention allows each touch-event query to attend to any part of
-the accelerometer stream, including regions temporally unrelated to the touch.%
+Generic cross-modal attention---as in Crossformer~\cite{crossformer2023}, which allows
+queries to attend across all temporal positions---allows each touch-event query to attend
+to any part of the accelerometer stream, including regions temporally unrelated to the touch.%
 This is physically wrong: the causal impulse response of finger contact is localized to
 $[0, T_{\mathrm{win}}]$ after the touch and decays monotonically.%
+Unlike CausalFormer~\cite{causalformer2024}, which \textit{discovers} causal structure
+post-hoc via learned attention, PC-CWA \textit{encodes} known physical causal structure
+as a hard architectural constraint, providing stronger inductive bias and higher
+sample efficiency.%
 PC-CWA encodes these two physical priors directly into the attention mechanism.%
 
 \noindent\textbf{Causal mask.}
@@ -239,7 +244,7 @@ via $\mathrm{GAP}(E_{\mathrm{causal}})$.%
 
 \noindent\textbf{Stage 1: Masked accelerometer pre-training.}
 The Transformer encoder is pre-trained on a large corpus of unlabeled smartphone
-accelerometer recordings using masked autoencoding (MAE)~\cite{he2022mae}.%
+accelerometer recordings using masked autoencoding (MAE)~\cite{he2022mae,patchtst2023,simmtm2023}.%
 A random 75\% of patch tokens are masked; the encoder processes visible tokens, and a
 lightweight decoder reconstructs masked patches.%
 Objective:

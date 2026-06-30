@@ -18,9 +18,16 @@ actuation of the capacitive touchscreen.%
 LLM agents are openly available and economically viable as fraud infrastructure.%
 AutoGLM~\cite{autoglm2024} achieves 36.2\% success rate on general phone tasks and is
 commercially deployed; AppAgent~\cite{appagent2024} reached a 50\% task-completion rate
-on a 50-task Android benchmark.%
+on a 50-task Android benchmark; CogAgent~\cite{cogagent2024} achieves state-of-the-art
+GUI navigation via a dual-resolution vision-language model without requiring system APIs;
+and Mobile-Agent~\cite{mobileagent2024} enables vision-only phone operation without XML
+metadata.%
+AndroidWorld~\cite{androidworld2024} benchmarks 116 programmatic tasks across 20 real
+Android apps, providing a standardized measure of agent capability that underscores the
+maturity of the threat.%
 Documented fraud use cases include mass account creation, advertising click fraud,
-welfare and bonus farming, and silent payment confirmation during remote-assistance scams.%
+welfare and bonus farming, and silent payment confirmation during remote-assistance
+scams~\cite{clickfraud2021,adffraud2021}.%
 Unlike scripted bots that repeat fixed sequences, LLM agents adapt to UI state changes,
 making trajectory-level detection significantly harder.%
 
@@ -38,6 +45,10 @@ The fundamental weakness of kinematic detection is that it measures \textit{lear
 behavioral statistics}: an LLM agent equipped with a human-motion synthesis
 model~\cite{swipegen2025} can generate touch events whose kinematics are
 statistically indistinguishable from real users.%
+Behavioral biometric systems for mobile authentication---including multi-modal
+continuous authentication~\cite{mmauth2022} and few-shot behavioral verification~\cite{authentisense2023}---face
+the same spoofability: they measure how interaction \textit{looks}, not whether it
+\textit{physically occurred}.%
 Indeed, Turing Test on Screen trains a ``humanization'' pipeline against its own detector,
 showing that kinematic defense and offense are engaged in an arms race with no
 physics-grounded endpoint.%
@@ -70,7 +81,14 @@ No software-side modification can change this.%
 \subsection{Zero-Permission Accelerometer}
 \label{sec:bg_sensor}
 
-Android's \texttt{TYPE\_LINEAR\_ACCELERATION} composite sensor reports the
+Android's zero-permission motion sensors are already known to leak sensitive private
+information: AccEar~\cite{accear2022} reconstructs unconstrained speech from accelerometer
+readings of a phone loudspeaker, and StealthyIMU~\cite{stealthyimu2023} infers private
+voice-assistant responses from motion sensors without any permission.%
+These attacks confirm that zero-permission sensors carry rich physical information about
+on-device events---a property we exploit for a defensive purpose.%
+
+\texttt{TYPE\_LINEAR\_ACCELERATION} reports the
 device acceleration with gravity removed, requiring no declared permission.%
 It is available on virtually all Android devices since API level~9 and remains
 accessible to background apps without the \texttt{HIGH\_SAMPLING\_RATE\_SENSORS}

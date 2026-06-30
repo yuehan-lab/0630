@@ -3,14 +3,15 @@
 
 The emergence of large language model (LLM)-driven mobile GUI agents represents a qualitative
 shift in mobile automation fraud.%
-Frameworks such as AutoGLM~\cite{autoglm2024}, AppAgent~\cite{appagent2024}, and Anthropic's
+Frameworks such as AutoGLM~\cite{autoglm2024}, AppAgent~\cite{appagent2024},
+CogAgent~\cite{cogagent2024}, Mobile-Agent~\cite{mobileagent2024}, and Anthropic's
 Computer Use~\cite{anthropiccu2024} enable a remote operator to direct a smartphone by
 supplying natural-language goals: the agent observes the screen, reasons about the next
 action, and injects touch events via the Android Debug Bridge (ADB) or
-\texttt{AccessibilityService}.%
+\texttt{AccessibilityService}~\cite{a11yabuse2021,dva2024}.%
 These systems are openly available, cost under \$0.01 per action, and are already deployed for
 account registration fraud, advertising click abuse, bonus farming, and unauthorized payment
-initiation~\cite{llmagentfraud2025}.%
+initiation~\cite{llmagentfraud2025,clickfraud2021,adffraud2021}.%
 At scale, a single operator can simultaneously control thousands of devices, achieving a
 human-to-session ratio of 1:1{,}000 or greater---an economic asymmetry that renders
 manual review economically infeasible.%

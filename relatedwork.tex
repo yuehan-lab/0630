@@ -8,10 +8,16 @@ LLM-driven mobile GUI agents have advanced rapidly in capability and deployment.
 AppAgent~\cite{appagent2024} and AutoGLM~\cite{autoglm2024} both achieve
 task-completion rates above 36\% on general phone benchmarks, with AutoGLM commercially
 deployed.%
+CogAgent~\cite{cogagent2024} achieves state-of-the-art GUI navigation using a
+dual-resolution 18B VLM without system API access; Mobile-Agent~\cite{mobileagent2024}
+enables vision-only phone operation without XML metadata.%
+SeeAct~\cite{seeact2024} demonstrates that GPT-4V can act as a generalist web agent when
+paired with effective grounding, and AndroidWorld~\cite{androidworld2024} standardizes
+evaluation across 116 tasks on 20 real Android apps.%
 Anthropic's Computer Use~\cite{anthropiccu2024} extends the paradigm to desktop interfaces.%
 The security implications of agent-controlled mobile devices have been documented in the
 fraud context: mass account registration, advertising click abuse, welfare farming, and
-unauthorized payment confirmation~\cite{llmagentfraud2025}.%
+unauthorized payment confirmation~\cite{llmagentfraud2025,clickfraud2021,adffraud2021}.%
 Existing defenses targeting LLM agents focus on prompt injection~\cite{agentinjection2024}
 and policy-level access control~\cite{agentpolicy2024}, rather than detecting whether
 an active session is agent-controlled.%
@@ -24,9 +30,18 @@ Classical mobile bot detection relies on device attestation (SafetyNet, Play Int
 and emulator fingerprinting~\cite{emulatordetect2022}.%
 Phone farms defeat both: real hardware passes attestation and carries genuine device
 identifiers.%
+Environment-aware evasion techniques~\cite{sandboxevasion2022} further demonstrate that
+distinguishing real devices from sandboxes via user-artifact differences defeats
+state-of-the-art mobile sandboxes.%
 Statistical behavioral methods---touch trajectory analysis, UI interaction graphs---were
 designed for scripted bots~\cite{frauddroid2017} and are bypassed by LLM agents that
 adapt to UI state.%
+The Android accessibility framework has been extensively misused by malware for
+cross-app data theft and unauthorized transaction fraud~\cite{a11yabuse2021,dva2024},
+illustrating the breadth of the software injection threat surface.%
+Large-scale measurement studies confirm that click-farm-based invalid traffic already
+operates at industrial scale~\cite{clickfraud2021,adffraud2021}, motivating detection
+primitives that remain valid against real-hardware phone farms.%
 BeCAPTCHA~\cite{becaptcha2021} combined accelerometer and touch kinematics for bot
 detection in a CAPTCHA-style challenge, but its feature engineering targets
 repetitive fixed-script bots and does not model the physical causality gap.%
@@ -40,11 +55,28 @@ Our work closes this gap with a structurally unforgeable physical primitive.%
 
 Sensor-based liveness detection has been explored in the context of fingerprint and
 face recognition~\cite{sensorliveness2023} and touch-screen authentication~\cite{touchauth2020}.%
+USENIX Security has shown that even liveness is insufficient: puppet attacks can replay
+captured finger motion, requiring behavioral biometrics as a complementary
+layer~\cite{livenessnotenough2020}.%
+TouchPass~\cite{touchpass2020} authenticates users via chassis vibrations during
+touch---a physical signal related to, but distinct from, the causality impulse we exploit.%
+Behavioral biometric systems such as MMAuth~\cite{mmauth2022} and
+AuthentiSense~\cite{authentisense2023} achieve high accuracy for continuous
+authentication, but remain vulnerable to synthesis attacks because they measure
+statistical patterns rather than physical necessity.%
+Modern CAPTCHA evaluations~\cite{captchastudy2023} confirm that purely behavioral
+challenges are increasingly ineffective, with state-of-the-art solvers bypassing
+them at high rates.%
 BioMotoTouch~\cite{biomotouch2026} characterizes the mechanical impulse response of
 real finger contact as measured by the accelerometer, providing the physical model
 underlying Observation~1 (Section~\ref{sec:obs1}).%
 iStelan~\cite{istelan2023} demonstrates that capacitive touchscreen contact produces
 an EM transient detectable by the permission-free magnetometer.%
+Zero-permission motion sensors have further been shown to leak speech
+content~\cite{accear2022} and private voice-assistant responses~\cite{stealthyimu2023},
+and PhyScout~\cite{physcout2024} detects multi-sensor spoofing via spatio-temporal
+consistency---illustrating the richness of physical information available at zero
+privilege.%
 Our work adapts the accelerometer-based physical causality chain to the LLM agent
 detection problem, introducing a new three-class threat model (including the novel
 overlay agent class) and a cross-modal attention architecture optimized for this setting.%
@@ -56,11 +88,25 @@ Self-supervised pre-training on sensor time-series has produced strong generaliz
 representations.%
 TF-C~\cite{tfc2022} enforces consistency between time-domain and frequency-domain views
 via contrastive learning.%
+PatchTST~\cite{patchtst2023} segments time series into patch-level tokens for
+channel-independent Transformer processing with masked pre-training, directly
+motivating our patch-based accelerometer encoder in Stage~1.%
+SimMTM~\cite{simmtm2023} recovers masked time points via weighted neighbor aggregation
+on the data manifold, providing an alternative masked pre-training objective for
+sensor data.%
 FOCAL~\cite{focal2023} uses factorized shared-and-private encoders for multi-sensor
 cross-modal contrastive pre-training.%
 CA-TCC~\cite{catcc2023} extends contrastive learning to semi-supervised sensor HAR.%
 TS-TCC~\cite{tstcc2021} applies temporal and contextual contrastive objectives to IMU data.%
+Crossformer~\cite{crossformer2023} introduces cross-dimension attention for multivariate
+time series, capturing dependencies across sensor channels; our PC-CWA adapts the
+cross-attention paradigm to the asymmetric, physics-constrained relationship between
+the touch-event and accelerometer streams.%
+CausalFormer~\cite{causalformer2024} discovers causal graphs from multivariate time
+series via interpretable attention; our PC-CWA differs by encoding \textit{known}
+physical causal structure as a hard architectural constraint rather than learning
+causality from data.%
 Our PCCN Stage~2 training loss builds on TF-C~\cite{tfc2022} and SupCon~\cite{supcon2020},
-while our cross-modal attention head draws on the principle of factorized multi-modal
-processing in FOCAL, adapted to the asymmetric causality structure of the
-accelerometer--touch relationship.%
+while our cross-modal attention head is informed by the cross-dimensional processing
+principles of FOCAL and Crossformer, adapted to the asymmetric causality structure
+of the accelerometer--touch relationship.%

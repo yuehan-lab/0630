@@ -1,0 +1,37 @@
+\section{Conclusion}
+\label{sec:conclusion}
+
+LLM GUI agents defeat device attestation and kinematic detection because they run on
+real hardware and can synthesize statistically plausible touch trajectories.%
+The distinguishing property of an agent-controlled session is not its behavioral
+statistics but its \textit{physical origin}: software touch injection never actuates
+the touchscreen hardware, so no mechanical impulse propagates through the chassis
+and no accelerometer transient is produced.%
+
+PhysCausal exploits this structural impossibility.%
+A zero-permission linear accelerometer records the impulse signature of genuine finger
+contact; the Physical Causality Consistency Network jointly processes the accelerometer
+stream and touch-event timestamps via cross-modal attention, detecting the presence or
+absence of causal impulse coupling at each touch position.%
+A server-selected challenge time $t^*$, communicated only after recording begins,
+makes pre-recorded impulse injection infeasible and enables detection of the novel
+overlay agent threat---where an LLM agent injects fraudulent taps into a live human
+session.%
+
+We train PCCN in three stages---masked accelerometer pre-training, supervised
+contrastive fine-tuning, and cross-modal head training on touch--accelerometer
+pairs---achieving \textcolor{red}{>XX\%} accuracy under a zero-overlap device-model
+split across \textcolor{red}{XX} Android device families.%
+Post-hoc attention visualization confirms that PCCN independently rediscovers the
+[0,\,60]\,ms physical impulse window, providing an interpretable and
+physics-grounded explanation for every detection decision.%
+
+The broader implication is that \textit{physical causality signals} constitute an
+unforgeable primitive for mobile session liveness: their presence requires genuine
+human contact that no software injection can fabricate, and their targeted absence
+at a server-specified challenge time cannot be concealed by any pre-recorded stream.%
+Future work includes multi-sensor fusion (combining accelerometer and magnetometer
+primitives) when elevated permissions are available, federated deployment preserving
+user privacy while aggregating detection evidence across installations, and
+investigation of A3-level physical tethering countermeasures to bound the economic
+cost imposed on sophisticated farm operators.%

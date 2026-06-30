@@ -1,0 +1,111 @@
+\section{Introduction}
+\label{sec:intro}
+
+The emergence of large language model (LLM)-driven mobile GUI agents represents a qualitative
+shift in mobile automation fraud.%
+Frameworks such as AutoGLM~\cite{autoglm2024}, AppAgent~\cite{appagent2024}, and Anthropic's
+Computer Use~\cite{anthropiccu2024} enable a remote operator to direct a smartphone by
+supplying natural-language goals: the agent observes the screen, reasons about the next
+action, and injects touch events via the Android Debug Bridge (ADB) or
+\texttt{AccessibilityService}.%
+These systems are openly available, cost under \$0.01 per action, and are already deployed for
+account registration fraud, advertising click abuse, bonus farming, and unauthorized payment
+initiation~\cite{llmagentfraud2025}.%
+Unlike classical scripted bots that repeat fixed action sequences, LLM agents are adaptive:
+they navigate unexpected UI states, solve simple CAPTCHAs, and can be equipped with
+human-motion synthesis to mimic plausible touch trajectories.%
+
+\textit{Kinematic detection is insufficient against LLM agents.}%
+The state-of-the-art detection approach, represented by Turing Test on Screen~\cite{ttos2026},
+analyzes touch kinematic features---coordinates, velocity, inter-touch duration---to distinguish
+LLM agents from human operators.%
+This framing asks: \textit{does this interaction look like a human?}%
+An LLM agent augmented with a motion-synthesis model can answer ``yes'' without requiring
+any physical contact: it generates touch events whose coordinate trajectories and timing
+distributions match the statistical fingerprint of real users.%
+Turing Test on Screen itself acknowledges that \textit{``achieving high-fidelity humanization of
+SensorEvents poses significant technical challenges''} and delineates physical sensor spoofing
+as an open problem outside its scope.%
+BeCAPTCHA~\cite{becaptcha2021}, a precursor using accelerometer and touchscreen biometrics,
+was designed for fixed-script bots predating the LLM agent era and is similarly circumventable
+by realistic motion synthesis.%
+
+We observe that the right question is not ``does this interaction \textit{look} like a
+human?''\ but rather ``did this interaction \textit{physically originate} from a human?''%
+Every real finger contact with a smartphone touchscreen initiates a chain of physical
+events that are fundamentally inaccessible to software automation.%
+The mechanical impulse of a fingertip striking the glass propagates through the phone chassis
+and produces a measurable acceleration transient at the MEMS accelerometer---a brief,
+sub-100\,ms pulse detectable by the \textit{zero-permission} linear accelerometer
+(\texttt{TYPE\_LINEAR\_ACCELERATION})~\cite{androidSensor}.%
+ADB-injected and \texttt{AccessibilityService}-dispatched touch events are software
+\texttt{InputEvent} objects; they traverse the Android input dispatch pipeline but never
+actuate the touchscreen hardware.%
+No finger makes contact, no impulse propagates, and the accelerometer remains silent.%
+This \textit{physical causality gap} is a structural impossibility for software automation---
+unlike kinematic statistics, it cannot be forged by any combination of timing adjustments
+or synthetic trajectory generation.%
+
+We present \textit{PhysCausal}, a challenge-response system that exploits the physical
+causality gap to detect LLM GUI agents using only the zero-permission accelerometer.%
+PhysCausal operates in two complementary modes.%
+In \textit{passive mode}, the system continuously correlates the touch-event timestamp stream
+$\tau(t)$ against the linear acceleration signal $\delta(t)$: for each reported touch, it
+checks whether an accelerometer impulse is present in the subsequent [0,\,80]\,ms window.%
+In \textit{active mode}, the server additionally selects a random challenge time
+$t^* \in [\frac{T}{4},\frac{3T}{4}]$ after recording begins, prompting a single tap;
+the physical impulse at $t^*$ is then verified.%
+Because $t^*$ is chosen after the session starts, pre-recorded impulse streams cannot
+contain a correctly timed transient.%
+
+A \textit{Physical Causality Consistency Network} (PCCN) jointly processes two input streams:
+the linear acceleration signal and the sparse touch-event indicator series.%
+A patch-based Transformer encoder extracts temporal features from $\delta(t)$; a cross-modal
+attention module queries the accelerometer stream at each touch-event position, detecting
+the presence or absence of a causal impulse response.%
+A third stream encodes the distribution of inter-touch intervals, capturing the characteristic
+bimodal latency signature of cloud-API-backed LLM agents.%
+PCCN is trained in three stages: self-supervised masked pre-training on unlabeled
+accelerometer data, supervised contrastive fine-tuning on labeled sessions, and
+cross-modal head training on touch--accelerometer pairs.%
+
+\textit{Overlay agent detection.}
+We introduce a third-class threat not addressed by prior work: the \textit{overlay agent},
+in which an LLM agent injects fraudulent actions (e.g., payment confirmation taps)
+\textit{on top of} a session where a legitimate user is physically holding the phone.%
+This corresponds to the ``authorized push payment'' fraud scenario in which an attacker
+remotely controls actions while the victim believes they are the sole operator.%
+PCCN detects overlay agents because the server-issued challenge at $t^*$ will be executed
+by the ADB injection pathway, leaving no accelerometer impulse at that specific timestamp
+even though the broader session contains genuine human IMU activity.%
+
+We evaluate PhysCausal using \textcolor{red}{XX} participants on \textcolor{red}{XX} device
+models (Pixel, Galaxy, OnePlus, Xiaomi families) as the human class, and three LLM agent
+frameworks (AutoGLM, AppAgent, custom ADB scripts) under A0--A2 adversary conditions as the
+agent class.%
+Post-hoc attention visualization confirms that PCCN independently concentrates on the
+[0,\,80]\,ms post-touch window without explicit supervision.%
+
+\noindent\textbf{Contributions.}
+\begin{itemize}[leftmargin=*,topsep=2pt,itemsep=1pt]
+  \item \textbf{Physical causality as a liveness primitive.}
+        We identify and formalize the mechanical impulse response of real finger contact as
+        a zero-permission, structurally unforgeable signal that software injection cannot
+        replicate---closing the gap that kinematic-based detection leaves open.
+
+  \item \textbf{Physical Causality Consistency Network (PCCN).}
+        A unified passive/active architecture that (i)~detects causal coupling between
+        touch events and accelerometer impulses via cross-modal attention, and
+        (ii)~encodes LLM inference latency signatures via a timing distribution stream---
+        defeating A0--A2 adversaries including timing-mimicry attacks.
+
+  \item \textbf{Three-class threat model and overlay agent detection.}
+        We define and evaluate the novel overlay agent threat, where an LLM agent injects
+        fraudulent actions into a live human session, and show that the server-issued $t^*$
+        challenge defeats it at \textcolor{red}{>XX\%} detection accuracy.
+
+  \item \textbf{Cross-device evaluation and interpretability.}
+        We demonstrate \textcolor{red}{>XX\%} accuracy under a zero-overlap device-model
+        split and show via attention visualization that PCCN rediscovers the physical
+        impulse window without explicit feature engineering.
+\end{itemize}

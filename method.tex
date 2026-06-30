@@ -1,0 +1,214 @@
+\section{PhysCausal System Design}
+\label{sec:method}
+
+\subsection{System Pipeline}
+\label{sec:pipeline}
+
+PhysCausal operates as a five-step pipeline executed across client and server.%
+
+\noindent\textbf{Step 1: Session initialization.}
+The detection server issues a monitoring request specifying mode (passive or active) and
+window length $T$ (default 30\,s).%
+In active mode, the server additionally schedules a challenge time
+$t^* \in [\frac{T}{4}, \frac{3T}{4}]$ but withholds $t^*$ until recording has started.%
+
+\noindent\textbf{Step 2: Signal acquisition.}
+The PhysCausal agent, embedded in the host application, registers two listeners:
+(i)~\texttt{TYPE\_LINEAR\_ACCELERATION} via \texttt{SensorManager} at
+\texttt{SENSOR\_DELAY\_FASTEST} (sampling rate $f_s \approx 200$\,Hz on current hardware),
+and (ii)~the \texttt{View.OnTouchListener} callback, which records every
+\texttt{ACTION\_DOWN} timestamp from the Android input system.%
+In active mode, the server transmits $t^*$ over the open encrypted channel after
+recording starts; the agent presents the challenge UI element at $t^*$ and records
+the resulting touch timestamp.%
+At window end, the agent transmits the raw sample buffer and touch-event list to the server.%
+
+\noindent\textbf{Step 3: Preprocessing.}
+On the server, three preprocessing steps produce the model inputs.%
+First, a moving-median filter (window 50\,ms) estimates the slow background motion
+$\bar{a}(t)$, yielding the deviation signal
+$\delta_{\mathrm{acc}}(t) = \|\mathbf{a}(t) - \bar{\mathbf{a}}(t)\|_2$
+that suppresses postural drift while preserving impulse transients.%
+Second, the signal is bandpass-filtered (1--50\,Hz, 4th-order Butterworth) to remove
+sensor DC offset and aliased noise.%
+Third, $\delta_{\mathrm{acc}}(t)$ is z-score normalized per session to remove
+device-to-device gain differences.%
+The touch-event list is converted to a sparse indicator vector
+$\tau(t) \in \{0,1\}^T$ at the same sampling grid.%
+Inter-touch intervals $\mathcal{I} = \{\Delta t_i = \tau_{i+1} - \tau_i\}$ are retained as a separate
+input stream.%
+
+\noindent\textbf{Step 4: PCCN inference.}
+The Physical Causality Consistency Network (Section~\ref{sec:pccn}) classifies the session.%
+
+\noindent\textbf{Step 5: Verdict.}
+The server returns a ternary label (\textit{human}, \textit{autonomous agent},
+\textit{overlay agent}) to the calling service for downstream enforcement.%
+
+\subsection{Physical Causality Consistency Network (PCCN)}
+\label{sec:pccn}
+
+PCCN jointly processes three input streams---the deviation signal, the touch-event
+indicator, and the inter-touch interval distribution---through a shared Transformer
+backbone with cross-modal attention.%
+Fig.~\ref{fig:pccn} shows the full architecture.%
+
+\begin{figure}[t]
+  \centering
+  \textcolor{green}{[Figure: PCCN architecture.
+  Three vertical input lanes on the left:
+  Lane 1 (top): ``$\delta_{\mathrm{acc}}(t)$'' waveform $\rightarrow$ ``Patch Embedding''
+    (gray block) $\rightarrow$ ``Transformer Encoder ($L$ layers)'' (blue block)
+    $\rightarrow$ $E_{\mathrm{acc}} \in \mathbb{R}^{N_p \times d}$.
+  Lane 2 (middle): ``$\tau(t)$ Touch Events'' sparse bar $\rightarrow$
+    ``Event Encoding + Positional'' (gray block)
+    $\rightarrow$ $E_{\mathrm{touch}} \in \mathbb{R}^{N_e \times d}$.
+  Cross-modal attention block (center-right, amber border):
+    $Q = E_{\mathrm{touch}}$, $K/V = E_{\mathrm{acc}}$
+    $\rightarrow$ $E_{\mathrm{causal}} \in \mathbb{R}^{N_e \times d}$
+    labeled ``Causal Impulse Detector.''
+  Lane 3 (bottom): ``$\mathcal{I} = \{\Delta t_i\}$'' histogram bars $\rightarrow$
+    ``Distribution Encoder (LogNormal + BiModal heads)'' (gray block)
+    $\rightarrow$ $E_{\mathrm{timing}} \in \mathbb{R}^d$.
+  Two output heads on the right:
+    Top head: ``Passive Head: GAP($E_{\mathrm{acc}}$) $\rightarrow$ MLP'' $\rightarrow$ 2-class ŷ.
+    Bottom head: ``Active Head:
+      $[\mathrm{GAP}(E_{\mathrm{acc}}) \| \mathrm{GAP}(E_{\mathrm{causal}}) \| E_{\mathrm{timing}}]$
+      $\rightarrow$ MLP'' $\rightarrow$ 3-class ŷ (Human / Autonomous / Overlay).
+  White background, unified navy/amber/gray palette.]}
+  \caption{PCCN architecture. Three input streams feed a shared Transformer backbone
+  with cross-modal attention that detects causal coupling between accelerometer impulses
+  and touch events. Passive and active heads share all upstream parameters.}
+  \label{fig:pccn}
+\end{figure}
+
+\noindent\textbf{Stream 1: Accelerometer encoder.}
+The deviation signal $\delta_{\mathrm{acc}}(t) \in \mathbb{R}^T$ is divided into
+non-overlapping patches of length $p$ (default $p{=}40$ samples, 200\,ms at 200\,Hz).%
+Each patch is projected to a $d$-dimensional embedding via a learned linear layer,
+yielding $N_p = T/p$ patch tokens.%
+Learnable positional embeddings are added, and the token sequence is processed by
+an $L$-layer Transformer encoder with multi-head self-attention ($H$ heads) and
+feed-forward width $4d$.%
+The output $E_{\mathrm{acc}} \in \mathbb{R}^{N_p \times d}$ encodes temporal structure
+across the full monitoring window.%
+
+\noindent\textbf{Stream 2: Touch-event encoder.}
+Touch events $\{t_i^e\}_{i=1}^{N_e}$ define $N_e$ event tokens.%
+Each token is initialized to a learned event embedding $\mathbf{e}_{\mathrm{evt}}$
+plus a continuous sinusoidal positional encoding derived from the event's
+absolute timestamp within the window.%
+This produces $E_{\mathrm{touch}} \in \mathbb{R}^{N_e \times d}$.%
+
+\noindent\textbf{Cross-modal attention: causal impulse detector.}
+A single multi-head cross-attention layer queries the accelerometer stream at each
+touch-event position:
+\begin{equation}
+E_{\mathrm{causal}} = \mathrm{Softmax}\!\left(\frac{Q_{\mathrm{touch}}\,K_{\mathrm{acc}}^\top}{\sqrt{d}}\right) V_{\mathrm{acc}},
+\label{eq:crossattn}
+\end{equation}
+where $Q_{\mathrm{touch}} = E_{\mathrm{touch}} W^Q$,
+$K_{\mathrm{acc}} = E_{\mathrm{acc}} W^K$,
+$V_{\mathrm{acc}} = E_{\mathrm{acc}} W^V$
+are learned projections.%
+The attention weights concentrate on the patch tokens near each touch event, and
+$E_{\mathrm{causal}} \in \mathbb{R}^{N_e \times d}$ encodes whether a causal
+accelerometer impulse is present at each touch position.%
+For the overlay agent class, genuine human touches produce impulses across the session,
+but the server-selected challenge touch at $t^*$ is executed by ADB and produces no
+impulse; the cross-attention at that token position captures this localized absence.%
+
+\noindent\textbf{Stream 3: Timing distribution encoder.}
+Inter-touch intervals $\mathcal{I} = \{\Delta t_i\}$ are embedded via two parallel branches:
+(i)~a log-transform head computes summary statistics $[\mu_{\log}, \sigma_{\log}, \mathrm{skew}]$
+of $\log(\Delta t_i)$, capturing lognormal shape parameters;
+(ii)~a bimodality head computes the bimodality coefficient
+$B = (\hat{\gamma}^2 + 1) / (\hat{\kappa} + 3\frac{(n-1)^2}{(n-2)(n-3)})$~\cite{bimodality1985}
+and the ratio of sub-300\,ms events (characteristic of LLM cloud inference latency).%
+Both branch outputs are concatenated and projected to $E_{\mathrm{timing}} \in \mathbb{R}^d$
+via an MLP.%
+This stream captures the lognormal (human), bimodal-latency (LLM cloud agent), and
+near-uniform (ADB script) signatures identified in Section~\ref{sec:obs2}.%
+
+\noindent\textbf{Passive head.}
+A global average pooling (GAP) of $E_{\mathrm{acc}}$ followed by a two-layer MLP
+produces a 2-class logit (human vs.\ any agent).%
+Passive mode uses this head alone; it operates without any touch-event input by pooling
+pure accelerometer context.%
+
+\noindent\textbf{Active head.}
+The three streams are fused by concatenation:
+\begin{equation}
+\mathbf{h} = \bigl[\mathrm{GAP}(E_{\mathrm{acc}}) \;\|\; \mathrm{GAP}(E_{\mathrm{causal}}) \;\|\; E_{\mathrm{timing}}\bigr] \in \mathbb{R}^{3d}.
+\label{eq:fusion}
+\end{equation}
+A two-layer MLP with dropout (rate 0.2) maps $\mathbf{h}$ to 3-class logits
+(\textit{human}, \textit{autonomous agent}, \textit{overlay agent}).%
+The passive head is a subgraph of this: the active head learns to exploit
+physical causality evidence at $t^*$ in addition to background accelerometer context
+and timing statistics.%
+
+\noindent\textbf{Gated active-mode contribution.}
+To share parameters across modes, a scalar gate $g = \sigma(W_g \mathbf{h})$ weights
+the causal term at inference: if the session is declared passive (no $t^*$),
+the model sets $\mathrm{GAP}(E_{\mathrm{causal}}) = \mathbf{0}$, reducing the
+active head to a timing-aware passive classifier.%
+
+\subsection{Three-Stage Training}
+\label{sec:training}
+
+\noindent\textbf{Stage 1: Self-supervised masked pre-training.}
+We pre-train the Transformer encoder on a large corpus of unlabeled smartphone
+accelerometer recordings using masked autoencoding (MAE)~\cite{he2022mae}.%
+A random 75\% of patch tokens are masked; the encoder processes visible tokens,
+and a lightweight decoder reconstructs the masked patches.%
+The pre-training objective is the mean squared error on masked positions:
+\begin{equation}
+\mathcal{L}_{\mathrm{MAE}} = \frac{1}{|\mathcal{M}|} \sum_{i \in \mathcal{M}} \|\hat{\mathbf{p}}_i - \mathbf{p}_i\|_2^2.
+\label{eq:mae}
+\end{equation}
+This stage teaches the encoder to model the statistical structure of device
+motion without any label supervision.%
+
+\noindent\textbf{Stage 2: Supervised contrastive fine-tuning.}
+We fine-tune the encoder on labeled sessions using a combined loss:
+\begin{equation}
+\mathcal{L}_{\mathrm{stage2}} = \mathcal{L}_{\mathrm{CE}} + \lambda_1 \mathcal{L}_{\mathrm{TFC}} + \lambda_2 \mathcal{L}_{\mathrm{SCL}},
+\label{eq:stage2}
+\end{equation}
+where $\mathcal{L}_{\mathrm{CE}}$ is cross-entropy on class labels,
+$\mathcal{L}_{\mathrm{TFC}}$ is time-frequency consistency contrastive loss~\cite{tfc2022}
+that enforces agreement between time-domain and frequency-domain views of the same
+session, and $\mathcal{L}_{\mathrm{SCL}}$ is supervised contrastive loss~\cite{supcon2020}
+that pulls same-class embeddings together and pushes different-class embeddings apart.%
+Default weights: $\lambda_1 = 0.5$, $\lambda_2 = 0.1$.%
+
+\noindent\textbf{Stage 3: Cross-modal head training.}
+With the Transformer encoder frozen, we train the cross-modal attention layer,
+the timing distribution encoder, and both classification heads jointly on labeled
+touch--accelerometer pairs.%
+This stage teaches the model to exploit physical causality coupling without corrupting
+the pre-trained temporal features.%
+We apply label smoothing (0.1) and use AdamW~\cite{adamw2019} with a cosine learning
+rate schedule.%
+
+\subsection{Session Aggregation}
+\label{sec:aggregation}
+
+For long monitoring windows ($T > 30$\,s), we segment the session into non-overlapping
+windows of 30\,s and run PCCN independently on each segment.%
+The session-level verdict is the majority vote of segment-level predictions, with ties
+broken by the highest-confidence class.%
+This windowed approach allows the system to detect agents that insert human-like delays
+in early touches but revert to scripted timing in later interactions.%
+
+\subsection{Complexity and Overhead}
+\label{sec:complexity}
+
+PCCN has $\approx$\textcolor{red}{XX}\,M parameters.%
+Server-side inference on a 30-s window takes $\approx$\textcolor{red}{XX}\,ms on a
+single CPU core, adding negligible latency to the authentication flow.%
+The client-side agent uses zero dangerous permissions, consumes
+$\approx$\textcolor{red}{XX}\,mAh over a 30-s session (measured on a Pixel 8 at
+\texttt{SENSOR\_DELAY\_FASTEST}), and runs in the existing application process without
+a dedicated background service.%

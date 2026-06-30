@@ -1,0 +1,99 @@
+\section{System Model and Adversary Model}
+\label{sec:sysmodel}
+
+\subsection{System Model}
+
+PhysCausal involves two principals: a \textit{client device} (the smartphone under
+test) and a \textit{detection server} operated by a platform or application provider
+(e.g., a mobile bank, ad exchange, or app store).%
+
+\noindent\textbf{Client device.}
+The client runs a lightweight PhysCausal agent embedded in the host application.%
+The agent operates in one of two server-selected modes.%
+
+In \textit{passive mode}, the agent performs two concurrent actions during the
+monitoring window: (i)~records \texttt{TYPE\_LINEAR\_ACCELERATION} at
+\texttt{SENSOR\_DELAY\_FASTEST} and (ii)~logs touch-event timestamps reported by the
+Android input system.%
+No interaction is requested from the user and no visible UI change occurs.%
+
+In \textit{active mode}, the server additionally selects a challenge time
+$t^* \in [\frac{T}{4}, \frac{3T}{4}]$ \textit{after} the monitoring window begins and
+notifies the app.%
+The app presents a natural UI element (e.g., a tappable button or confirmation widget)
+at $t^*$.%
+The agent records the Android-reported touch timestamp and transmits both streams to
+the server.%
+Crucially, $t^*$ is communicated only after recording starts, so any pre-recorded
+accelerometer stream injected by an adversary cannot contain a correctly timed
+impulse transient.%
+
+No inference runs on-device; the full PCCN pipeline executes server-side, keeping
+the detection model confidential and preventing white-box adaptive attacks.%
+
+\noindent\textbf{Detection server.}
+The server receives the encrypted payload, extracts the linear acceleration signal and
+touch-event timestamps, and runs PCCN in passive or active mode.%
+In passive mode, PCCN classifies using $\delta(t)$ and $\tau(t)$ alone.%
+In active mode, PCCN additionally verifies the causal coupling at $t^*$.%
+The server returns a ternary verdict (\textit{human}, \textit{autonomous agent},
+or \textit{overlay agent}) to the calling service for downstream enforcement.%
+
+\noindent\textbf{Deployment properties.}
+The agent requires no dangerous Android permissions.%
+Passive monitoring adds zero user friction.%
+Active mode presents a single natural UI element indistinguishable from normal app flow.%
+Detection is triggered server-side, so a farm operator cannot anticipate or selectively
+suppress individual checks.%
+
+\textcolor{green}{[Figure: System architecture diagram. Left column (Client Device):
+smartphone icon at top; three stacked blocks connected by arrows:
+(1) ``Linear Acceleration Recording'' (gray, waveform icon, zero-permission label),
+(2) ``Touch Event Logging'' (gray, tap-finger icon),
+(3) ``Active Mode: Challenge at $t^*$'' (gray, dashed border, clock icon, label
+``$t^*$ chosen after recording starts'').
+Arrow to right: ``Encrypted Payload.''
+Right column (Detection Server): three stacked blocks:
+(1) ``Baseline Estimation $\rightarrow$ $\delta(t)$'' (blue),
+(2) ``PCCN Classifier'' split into ``Passive: $\delta(t) + \tau(t)$'' and
+``Active: $\delta(t) + \tau(t)$ at $t^*$'' (blue, dashed divider),
+(3) output diamond ``Human / Autonomous Agent / Overlay Agent'' (amber/navy/gray tricolor).
+Arrow from output: ``Verdict to App Backend.''
+White background, unified color palette.]}
+
+\subsection{Adversary Model}
+\label{sec:adversary}
+
+The adversary is an LLM agent operator whose goal is to cause agent-controlled sessions
+to be labeled as human-operated.%
+We consider four adversary levels of increasing capability.%
+
+\noindent\textbf{A0 (Default --- no evasion).}
+The agent dispatches touch events via ADB or \texttt{AccessibilityService} with no
+attempt to modify sensor output.%
+The accelerometer shows no impulse at any touch-event timestamp.%
+This is trivially detected by PhysCausal.%
+
+\noindent\textbf{A1 (Vibration motor).}
+The adversary attaches a vibration motor to the phone chassis and triggers it
+synchronously with each injected touch event, producing a mechanical signal in the
+accelerometer.%
+Motor-induced vibrations have a different spectral signature from real finger-impact
+impulses: motors produce narrowband sinusoidal oscillation at the motor's driving
+frequency, whereas finger impact produces a broadband transient with characteristic
+exponential decay.%
+In active mode, the vibration motor must additionally fire at the server-selected $t^*$,
+which is communicated only after recording begins; the motor controller can comply, but
+the spectral and temporal waveform mismatch remains detectable.%
+
+\noindent\textbf{A2 (Timing mimicry).}
+The adversary adjusts inter-touch intervals to match the lognormal distribution of
+human timing, defeating the timing-distribution stream of PCCN.%
+Active mode remains fully effective: mimicking timing does not produce physical impulses.%
+Passive mode retains residual detection from the causality stream alone.%
+
+\noindent\textbf{A3 (Human operator).}
+The adversary assigns a human to physically hold and tap the phone for each session,
+producing authentic physical signals.%
+This eliminates the economic advantage of LLM automation (1:1 human-to-session ratio)
+and is treated as outside the practical threat model.%

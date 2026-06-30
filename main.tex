@@ -1,0 +1,73 @@
+\documentclass[conference]{IEEEtran}
+\IEEEoverridecommandlockouts
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{algorithmic}
+\usepackage{graphicx}
+\usepackage{textcomp}
+\usepackage{xcolor}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{microtype}
+
+\begin{document}
+
+\title{PhysCausal: Detecting LLM GUI Agents via the Zero-Permission\\
+Physical Causality Gap}
+
+\author{
+  \IEEEauthorblockN{Anonymous Author(s)}
+  \IEEEauthorblockA{
+    \textit{Anonymous Institution}\\
+    anonymous@example.com
+  }
+}
+
+\maketitle
+
+\begin{abstract}
+LLM-driven mobile GUI agents inject touch events via ADB or \texttt{AccessibilityService},
+bypassing capacitive touchscreen hardware and leaving no mechanical trace in the device
+accelerometer.
+We identify this as the \textit{physical causality gap}: real finger contact
+transmits a broadband impulse ($\lesssim$100\,ms, $\sim$2--5\,mg) detectable by the
+\textit{zero-permission} \texttt{TYPE\_LINEAR\_ACCELERATION} sensor, whereas software
+injection produces no accelerometer response---a structural impossibility no timing
+or trajectory adjustment can overcome.
+We present \textit{PhysCausal}, a challenge-response system that exploits this gap.
+In \textit{passive mode}, the Physical Causality Consistency Network (PCCN) jointly
+processes the accelerometer deviation signal and touch-event timestamps via cross-modal
+attention, detecting the presence or absence of causal impulse coupling at each touch.
+In \textit{active mode}, a server-selected challenge time $t^*$, communicated only
+\textit{after} recording begins, additionally defeats pre-recorded impulse injection and
+enables detection of a novel \textit{overlay agent} threat---where an LLM agent injects
+fraudulent taps into a live human session.
+PCCN is trained via masked accelerometer pre-training, supervised contrastive fine-tuning,
+and cross-modal head training.
+Evaluated on \textcolor{red}{XX} participants across \textcolor{red}{XX} Android device
+models under A0--A2 adversary conditions, PhysCausal achieves \textcolor{red}{>XX\%}
+accuracy with \textcolor{red}{<XX\%} EER under a zero-overlap device-model split.
+Post-hoc attention visualization confirms that PCCN rediscovers the [0,\,60]\,ms
+physical impulse window without explicit supervision.
+\end{abstract}
+
+\begin{IEEEkeywords}
+LLM GUI agents, mobile fraud detection, physical liveness, accelerometer, cross-modal
+attention, challenge-response
+\end{IEEEkeywords}
+
+\input{introduction}
+\input{background}
+\input{PreliminaryAnalysis}
+\input{SystemModelAndAdversaryModel}
+\input{method}
+\input{relatedwork}
+\input{experiment}
+\input{conclusion}
+
+\bibliographystyle{IEEEtran}
+\bibliography{ref}
+
+\end{document}

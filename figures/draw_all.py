@@ -134,9 +134,11 @@ def fig_obs2():
     ax.axvline(130,  color=C2, lw=1.0, ls=':', alpha=0.8)
     ax.axvline(1050, color=C2, lw=1.0, ls=':', alpha=0.8)
     ax.axvline(47,   color='#888888', lw=1.0, ls='--', alpha=0.7)
-    ax.text(155,  ax.get_ylim()[1]*0.6 if ax.get_ylim()[1] > 0 else 0.001,
-            '130 ms', fontsize=8, color=C2)
-    ax.text(1100, 0.0002, '1050 ms', fontsize=8, color=C2)
+    _c, _e = np.histogram(llm_samples, bins=bins, density=True)
+    _cx = np.sqrt(_e[:-1] * _e[1:])
+    _y_label = _c[np.argmin(np.abs(_cx - 130))] * 0.78
+    ax.text(155,  _y_label, '130 ms',  fontsize=8, color=C2)
+    ax.text(1100, _y_label, '1050 ms', fontsize=8, color=C2)
 
     ax.set_xscale('log')
     ax.set_xlabel('Inter-Touch Interval (ms)')
